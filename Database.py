@@ -1,9 +1,9 @@
 import mysql.connector
 db_config = {
-    'user': '',
-    'password': '',
-    'host': '',
-    'database': ''
+    'user': 'admin',
+    'password': 'deepak123',
+    'host': 'python-connection.cras4m244pf3.us-east-1.rds.amazonaws.com',
+    'database': 'pythonsql'
 }
 
 class Database:

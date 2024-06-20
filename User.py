@@ -1,27 +1,17 @@
-import mysql.connector
-db_config = {
-    'user': '',
-    'password': '',
-    'host': '',
-    'database': ''
-}
 
-class Database:
-    @staticmethod
-    def execute_query(query, params=None):
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        conn.commit()
-        cursor.close()
-        conn.close()
+from Database import Database
 
-    @staticmethod
-    def fetch_query(query, params=None):
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        results = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return results
+
+class User:
+    def __init__(self, user_id, name):
+        self.user_id = user_id
+        self.name = name
+
+    def login(self):
+        query = "SELECT * FROM users WHERE user_id=%s AND user_name=%s"
+        result = Database.fetch_query(query, (self.user_id, self.name))
+        return result
+    
+    def view_menu(self):
+        query = "SELECT * FROM menu_items"
+        return Database.fetch_query(query)

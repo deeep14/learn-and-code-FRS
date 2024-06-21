@@ -66,19 +66,19 @@ class ConsoleApplication:
                 name = input("Enter item name: ")
                 price = float(input("Enter item price: "))
                 availability = input("Enter item availability (1 for yes/ 0 for no): ")
-                command = f"ADD_MENU_ITEM,{admin_id},{admin_name},{name},{price},{availability}"
+                command = f"ADD_food_item,{admin_id},{admin_name},{name},{price},{availability}"
                 ConsoleApplication.send_request(command)
 
             elif choice == '2':
                 item_id = int(input("Enter item ID: "))
                 new_price = float(input("Enter new price: "))
                 new_availability = input("Enter new availability (yes/no): ")
-                command = f"UPDATE_MENU_ITEM,{admin_id},{admin_name},{item_id},{new_price},{new_availability}"
+                command = f"UPDATE_food_item,{admin_id},{admin_name},{item_id},{new_price},{new_availability}"
                 ConsoleApplication.send_request(command)
 
             elif choice == '3':
                 item_id = int(input("Enter item ID: "))
-                command = f"DELETE_MENU_ITEM,{admin_id},{admin_name},{item_id}"
+                command = f"DELETE_food_item,{admin_id},{admin_name},{item_id}"
                 response = ConsoleApplication.send_request(command)
                 print(response)
             

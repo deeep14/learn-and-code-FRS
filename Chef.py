@@ -26,7 +26,7 @@ class Chef(User):
     def view_recomendation_menu(self):
         query =  """
         SELECT *
-        FROM menu_items
+        FROM food_items
         WHERE item_id IN (SELECT item_id FROM chef_recommendation_menu)
         """
         return Database.fetch_query(query)
@@ -34,16 +34,16 @@ class Chef(User):
     def view_ordered_items(self):
         query =   """
         SELECT *
-        FROM menu_items
+        FROM food_items
         WHERE item_id IN (SELECT item_id FROM Final_Order)
         """
         return Database.fetch_query(query)
     
     def view_generated_recommended_items(self):
         query = """
-        SELECT menu_items.item_id, menu_items.name, menu_items.price, generated_recommended_items.score
+        SELECT food_items.item_id, food_items.name, food_items.price, generated_recommended_items.score
         FROM generated_recommended_items
-        JOIN menu_items ON generated_recommended_items.item_id = menu_items.item_id
+        JOIN food_items ON generated_recommended_items.item_id = food_items.item_id
         ORDER BY generated_recommended_items.score DESC
         """
         return Database.fetch_query(query)

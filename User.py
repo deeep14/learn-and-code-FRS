@@ -13,5 +13,5 @@ class User:
         return result
     
     def view_menu(self):
-        query = "SELECT * FROM menu_items"
+        query = "SELECT * FROM food_items"
         return Database.fetch_query(query)

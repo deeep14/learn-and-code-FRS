@@ -9,12 +9,12 @@ class MenuItem:
 
     def set_price(self, price):
         self.price = price
-        query = "UPDATE menu_items SET price=%s WHERE item_id=%s"
+        query = "UPDATE food_items SET price=%s WHERE item_id=%s"
         Database.execute_query(query, (price, self.item_id))
 
     def set_availability(self, availability):
         self.availability = availability
-        query = "UPDATE menu_items SET availability=%s WHERE item_id=%s"
+        query = "UPDATE food_items SET availability=%s WHERE item_id=%s"
         Database.execute_query(query, (availability, self.item_id))
 
     def get_feedback(self):

@@ -19,7 +19,7 @@ class Employee(User):
     def view_menu(self):
         query =  """
         SELECT *
-        FROM menu_items
+        FROM food_items
         WHERE item_id IN (SELECT item_id FROM chef_recommendation_menu)
         """
         return Database.fetch_query(query)

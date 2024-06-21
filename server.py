@@ -4,7 +4,6 @@ from Admin import Admin
 from Chef import Chef
 from Employee import Employee
 from Notification import Notification
-from FeedbackAnalyzer import FeedbackAnalyzer
 
 HOST = '0.0.0.0'
 PORT = 1100
@@ -97,10 +96,7 @@ def process_request(client_socket, request):
             user_id = params[0]
             employee.choose_meal(date, item_id, user_id)
             client_socket.send("Meal chosen successfully".encode('utf-8'))
-        elif command == "RECOMMEND_TOP_ITEMS":
-            feedbackAnalyzer=FeedbackAnalyzer()
-            feedbackAnalyzer.recommend_top_items()
-            client_socket.send("Top items recommended successfully".encode('utf-8'))
+    
         elif command == "VIEW_RECOMMENDED_ITEMS":
             chef = Chef(user_id=params[0], name=params[1])
             recommended_items = chef.view_generated_recommended_items()

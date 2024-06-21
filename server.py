@@ -1,213 +1,156 @@
 import socket
-from datetime import date as currentDate
+import threading
+from Admin import Admin
+from Chef import Chef
+from Employee import Employee
+from Notification import Notification
+from FeedbackAnalyzer import FeedbackAnalyzer
 
-class ConsoleApplication:
-    @staticmethod
-    def run():
-        print("Welcome to the Cafeteria Recommendation Engine")
-        while True:
-            print("Select role:")
-            print("1. Admin")
-            print("2. Chef")
-            print("3. Employee")
-            print("4. Exit")
-            role = input("Enter your choice: ")
+HOST = '0.0.0.0'
+PORT = 1100
 
-            if role == '1':
-                admin_id = input("Enter Admin ID: ")
-                admin_name = input("Enter Admin Name: ")
-                if ConsoleApplication.login("Admin", admin_id, admin_name):
-                    ConsoleApplication.admin_menu(admin_id, admin_name)
-                else:
-                    print("Invalid Admin credentials")
-
-            elif role == '2':
-                chef_id = input("Enter Chef ID: ")
-                chef_name = input("Enter Chef Name: ")
-                if ConsoleApplication.login("Chef", chef_id, chef_name):
-                    ConsoleApplication.chef_menu(chef_id, chef_name)
-                else:
-                    print("Invalid Chef credentials")
-
-            elif role == '3':
-                emp_id = input("Enter Employee ID: ")
-                emp_name = input("Enter Employee Name: ")
-                if ConsoleApplication.login("Employee", emp_id, emp_name):
-                    ConsoleApplication.employee_menu(emp_id, emp_name)
-                else:
-                    print("Invalid Employee credentials")
-                    
-            elif role == '4':
-                print("Thank you for using our app")
+def handle_client(client_socket):
+    while True:
+        try:
+            request = client_socket.recv(1024).decode('utf-8')
+            if not request:
                 break
+            process_request(client_socket, request)
+        except Exception as e:
+            print(f"Error handling client: {e}")
+            break
+    client_socket.close()
 
+def process_request(client_socket, request):
+    try:
+        command, *params = request.split(',')
+        if command == "LOGIN":
+            user_type, user_id, name = params
+            if user_type == "Admin":
+                user = Admin(user_id, name)
+            elif user_type == "Chef":
+                user = Chef(user_id, name)
+            elif user_type == "Employee":
+                user = Employee(user_id, name)
             else:
-                print("Invalid choice, please try again.")
-
-    @staticmethod
-    def login(user_type, user_id, name):
-        command = f"LOGIN,{user_type},{user_id},{name}"
-        response = ConsoleApplication.send_request(command)
-        return response == "Login successful"
-
-    @staticmethod
-    def admin_menu(admin_id, admin_name):
-        while True:
-            print("\nAdmin Menu")
-            print("1. Add Menu Item")
-            print("2. Update Menu Item")
-            print("3. Delete Menu Item")
-            print("4. View Menu Item")
-            print("5. Generate Report")
-            print("6. Exit")
-            choice = input("Enter your choice: ")
-
-            if choice == '1':
-                name = input("Enter item name: ")
-                price = float(input("Enter item price: "))
-                availability = input("Enter item availability (1 for yes/ 0 for no): ")
-                command = f"ADD_food_item,{admin_id},{admin_name},{name},{price},{availability}"
-                ConsoleApplication.send_request(command)
-
-            elif choice == '2':
-                item_id = int(input("Enter item ID: "))
-                new_price = float(input("Enter new price: "))
-                new_availability = input("Enter new availability (yes/no): ")
-                command = f"UPDATE_food_item,{admin_id},{admin_name},{item_id},{new_price},{new_availability}"
-                ConsoleApplication.send_request(command)
-
-            elif choice == '3':
-                item_id = int(input("Enter item ID: "))
-                command = f"DELETE_food_item,{admin_id},{admin_name},{item_id}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
+                client_socket.send("Invalid user type".encode('utf-8'))
+                return
             
-            elif choice == '4':
-                command = f"VIEW_MENU,{admin_id},{admin_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
+            if user.login():
+                client_socket.send("Login successful".encode('utf-8'))
+            else:
+                client_socket.send("Invalid credentials".encode('utf-8'))
+        elif command == "ADD_food_item":
+            admin = Admin(user_id=params[0], name=params[1])
+            admin.add_food_item(params[2], float(params[3]), params[4], params[5])
+            client_socket.send("Menu item added successfully".encode('utf-8'))
+        elif command == "UPDATE_food_item":
+            admin = Admin(user_id=params[0], name=params[1])
+            admin.update_food_item(int(params[2]), float(params[3]), params[4], params[5])
+            client_socket.send("Menu item updated successfully".encode('utf-8'))
+        elif command == "DELETE_food_item":
+            admin = Admin(user_id=params[0], name=params[1])
+            item_id = int(params[2])
+            admin.delete_food_item(item_id)
 
-            elif choice == '5':
-                report_type = input("Enter report type: ")
-                date_range = input("Enter date range: ")
-                command = f"GENERATE_REPORT,{admin_id},{admin_name},{report_type},{date_range}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
+        elif command == "GIVE_FEEDBACK":
+            employee = Employee(user_id=params[0], name=params[1])
+            item_id = int(params[2])
+            comment = params[3]
+            rating = params[4]
+            employee.give_feedback(item_id,comment,rating)
+            client_socket.send("Feedback given successfully".encode('utf-8'))
+        elif command == "VIEW_MENU":
+            admin = Admin(user_id=params[0], name=params[1])
+            menu = admin.view_menu()
+            response = "\n".join([f"ID: {item[0]}, Name: {item[1]}, Price: {item[2]}, Type of meal: {item[3]}, Availability: {item[4]}" for item in menu])
+            client_socket.send(response.encode('utf-8'))
+        elif command == "SEND_NOTIFICATION":
+            notification_message = params[0]
+            Notification.send(notification_message)
+            client_socket.send("Notification sent successfully".encode('utf-8'))
+        elif command == "RECEIVE_NOTIFICATION":
+            notifications = Notification.receive()
+            client_socket.send("\n".join(notifications).encode('utf-8'))
+        elif command == "VIEW_FEEDBACK":
+            chef = Chef(user_id=params[0], name=params[1])
+            item_id = int(params[2])
+            feedback = chef.view_feedback(item_id)
+            overall_rating = chef.get_overall_rating(item_id)
+            response = "\n".join([f"Comment: {f[0]}, Rating: {f[1]}" for f in feedback])
+            response += f"\nOverall Rating: {overall_rating}"
+            client_socket.send(response.encode('utf-8'))
+        elif command == "VIEW_RECOMMENDATION_MENU":
+            chef = Chef(user_id=params[0], name=params[1])
+            menu = chef.view_recomendation_menu()
+            response = "\n".join([f"ID: {item[0]}, Name: {item[1]}, Price: {item[2]}, Type of meal: {item[3]}, Availability: {item[4]}" for item in menu])
+            client_socket.send(response.encode('utf-8'))
+        elif command == "VIEW_ORDERED_ITEMS":
+            chef = Chef(user_id=params[0], name=params[1])
+            menu = chef.view_ordered_items()
+            response = "\n".join([f"ID: {item[0]}, Name: {item[1]}, Price: {item[2]}, Type of meal: {item[3]}, Availability: {item[4]}" for item in menu])
+            client_socket.send(response.encode('utf-8'))
+        elif command == "CHOOSE_MEAL":
+            employee = Employee(user_id=params[0], name=params[1])
+            date = params[2]
+            item_id = int(params[3])
+            user_id = params[0]
+            employee.choose_meal(date, item_id, user_id)
+            client_socket.send("Meal chosen successfully".encode('utf-8'))
+        elif command == "RECOMMEND_TOP_ITEMS":
+            feedbackAnalyzer=FeedbackAnalyzer()
+            feedbackAnalyzer.recommend_top_items()
+            client_socket.send("Top items recommended successfully".encode('utf-8'))
+        elif command == "VIEW_RECOMMENDED_ITEMS":
+            chef = Chef(user_id=params[0], name=params[1])
+            recommended_items = chef.view_generated_recommended_items()
+            response = "\n".join([f"ID: {item[0]}, Name: {item[1]}, Price: {item[2]}, Score: {item[3]:.2f}" for item in recommended_items])
+            client_socket.send(response.encode('utf-8'))
+        else:
+            client_socket.send("Unknown command".encode('utf-8'))
+    except Exception as e:
+        client_socket.send(f"Error processing request: {e}".encode('utf-8'))
 
-            elif choice == '6':
-                break
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    server_socket.listen(5)
+    print(f"Server listening on {HOST}:{PORT}")
 
-    @staticmethod
-    def chef_menu(chef_id, chef_name):
-        while True:
-            print("\nChef Menu")
-            print("1. Recommend Menu")
-            print("2. View Feedback")
-            print("3. Send Notification")
-            print("4. View All Menu Items")
-            print("5. View Recommendation Menu Items")
-            print("6. View Ordered Items")
-            print("7. Generate recomendations")
-            print("8. View Generated Recommended Items")
-            print("9. Exit")
-            choice = input("Enter your choice: ")
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_handler = threading.Thread(target=handle_client, args=(client_socket,))
+        client_handler.start()
 
-            if choice == '1':
-                item_id = input("Enter item id: ")
-                date = currentDate.today()
-                command = f"RECOMMEND_MENU,{chef_id},{chef_name},{item_id},{date}"
-                ConsoleApplication.send_request(command)
+class NotificationServer(threading.Thread):
+    def __init__(self, host='0.0.0.0', port=5050):
+        super().__init__()
+        self.host = host
+        self.port = port
 
-            elif choice == '2':
-                item_id = int(input("Enter item ID: "))
-                command = f"VIEW_FEEDBACK,{chef_id},{chef_name},{item_id}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '3':
-                notification_message = input("Enter the notification message: ")
-                command = f"SEND_NOTIFICATION,{notification_message}"
-                ConsoleApplication.send_request(command)
-
-            elif choice == '4':
-                command = f"VIEW_MENU,{chef_id},{chef_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '5':
-                command = f"VIEW_RECOMMENDATION_MENU,{chef_id},{chef_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '6':
-                command = f"VIEW_ORDERED_ITEMS,{chef_id},{chef_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-            
-            elif choice == '7':
-                command = f"RECOMMEND_TOP_ITEMS"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '8':
-                command = f"VIEW_RECOMMENDED_ITEMS,{chef_id},{chef_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '9':
-                break
-
-            elif choice == '7':
-                break
-
-    @staticmethod
-    def employee_menu(emp_id, emp_name):
-        while True:
-            print("\nEmployee Menu")
-            print("1. Choose Meal")
-            print("2. Give Feedback")
-            print("3. View Menu")
-            print("4. Receive Notifications")
-            print("5. Exit")
-            choice = input("Enter your choice: ")
-
-            if choice == '1':
-                date = currentDate.today()
-                item_id = int(input("Enter item ID: "))
-                command = f"CHOOSE_MEAL,{emp_id},{emp_name},{date},{item_id}"
-                ConsoleApplication.send_request(command)
-                print("meal choosen")
-
-            elif choice == '2':
-                item_id = int(input("Enter item ID: "))
-                comment = input("Enter your comment: ")
-                rating = int(input("Enter your rating: "))
-                command = f"GIVE_FEEDBACK,{emp_id},{emp_name},{item_id},{comment},{rating}"
-                ConsoleApplication.send_request(command)
-
-            elif choice == '3':
-                command = f"VIEW_MENU,{emp_id},{emp_name}"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '4':
-                command = f"RECEIVE_NOTIFICATION"
-                response = ConsoleApplication.send_request(command)
-                print(response)
-
-            elif choice == '5':
-                break
-
-    @staticmethod
-    def send_request(command):
-        HOST = '127.0.0.1'
-        PORT = 9999
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((HOST, PORT))
-        client_socket.send(command.encode('utf-8'))
-        response = client_socket.recv(1024).decode('utf-8')
-        client_socket.close()
-        return response
+    def run(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+            server_socket.bind((self.host, self.port))
+            server_socket.listen()
+            print(f'Notification Server listening on {self.host}:{self.port}')
+            while True:
+                conn, addr = server_socket.accept()
+                with conn:
+                    print(f'Connected by {addr}')
+                    while True:
+                        data = conn.recv(1024)
+                        if not data:
+                            break
+                        Notification.send(data.decode())
+                        conn.sendall(b'Notification received')
 
 if __name__ == "__main__":
-    ConsoleApplication.run()
+    main_server_thread = threading.Thread(target=start_server)
+    notification_server_thread = NotificationServer()
+
+    main_server_thread.start()
+    notification_server_thread.start()
+
+    main_server_thread.join()
+    notification_server_thread.join()

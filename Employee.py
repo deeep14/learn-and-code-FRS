@@ -20,7 +20,7 @@ class Employee(User):
         query =  """
         SELECT *
         FROM food_items
-        WHERE item_id IN (SELECT item_id FROM chef_recommendation_menu)
+        WHERE item_id IN (SELECT item_id FROM chef_menu)
         """
         return Database.fetch_query(query)
     

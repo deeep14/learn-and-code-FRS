@@ -65,15 +65,17 @@ class ConsoleApplication:
             if choice == '1':
                 name = input("Enter item name: ")
                 price = float(input("Enter item price: "))
+                food_type = input("Enter food type(breakfast/lunch/dinner): ")
                 availability = input("Enter item availability (1 for yes/ 0 for no): ")
-                command = f"ADD_food_item,{admin_id},{admin_name},{name},{price},{availability}"
+                command = f"ADD_food_item,{admin_id},{admin_name},{name},{price},{food_type},{availability}"
                 ConsoleApplication.send_request(command)
 
             elif choice == '2':
                 item_id = int(input("Enter item ID: "))
                 new_price = float(input("Enter new price: "))
+                food_type = input("Enter food type(breakfast/lunch/dinner): ")
                 new_availability = input("Enter new availability (yes/no): ")
-                command = f"UPDATE_food_item,{admin_id},{admin_name},{item_id},{new_price},{new_availability}"
+                command = f"UPDATE_food_item,{admin_id},{admin_name},{new_price},{food_type},{new_availability}"
                 ConsoleApplication.send_request(command)
 
             elif choice == '3':
@@ -157,9 +159,6 @@ class ConsoleApplication:
             elif choice == '9':
                 break
 
-            elif choice == '7':
-                break
-
     @staticmethod
     def employee_menu(emp_id, emp_name):
         while True:
@@ -200,8 +199,8 @@ class ConsoleApplication:
 
     @staticmethod
     def send_request(command):
-        HOST = '127.0.0.1'
-        PORT = 9999
+        HOST = '0.0.0.0'
+        PORT = 1100
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((HOST, PORT))
         client_socket.send(command.encode('utf-8'))
